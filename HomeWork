@@ -1,0 +1,143 @@
+public interface IPaymentStrategy
+{
+    void Pay(decimal amount);
+}
+
+public class CreditCardPayment : IPaymentStrategy
+{
+    public void Pay(decimal amount)
+    {
+        Console.WriteLine($"Оплата банковской картой: {amount} тенге.");
+    }
+}
+
+public class PayPalPayment : IPaymentStrategy
+{
+    public void Pay(decimal amount)
+    {
+        Console.WriteLine($"Оплата через PayPal: {amount} тенге.");
+    }
+}
+
+public class CryptoPayment : IPaymentStrategy
+{
+    public void Pay(decimal amount)
+    {
+        Console.WriteLine($"Оплата криптовалютой: {amount} рублей.");
+    }
+}
+
+public class PaymentContext
+{
+    private IPaymentStrategy _paymentStrategy;
+
+    public void SetPaymentStrategy(IPaymentStrategy paymentStrategy)
+    {
+        _paymentStrategy = paymentStrategy;
+    }
+
+    public void Pay(decimal amount)
+    {
+        if (_paymentStrategy != null)
+        {
+            _paymentStrategy.Pay(amount);
+        }
+        else
+        {
+            Console.WriteLine("Стратегия оплаты не выбрана.");
+        }
+    }
+}
+
+public interface IObserver
+{
+    void Update(string currency, decimal rate);
+}
+
+public interface ISubject
+{
+    void RegisterObserver(IObserver observer);
+    void RemoveObserver(IObserver observer);
+    void NotifyObservers();
+}
+
+public class CurrencyExchange : ISubject
+{
+    private List<IObserver> _observers = new List<IObserver>();
+    private Dictionary<string, decimal> _rates = new Dictionary<string, decimal>();
+
+    public void RegisterObserver(IObserver observer)
+    {
+        _observers.Add(observer);
+    }
+
+    public void RemoveObserver(IObserver observer)
+    {
+        _observers.Remove(observer);
+    }
+
+    public void NotifyObservers()
+    {
+        foreach (var observer in _observers)
+        {
+            foreach (var rate in _rates)
+            {
+                observer.Update(rate.Key, rate.Value);
+            }
+        }
+    }
+
+    public void SetRate(string currency, decimal rate)
+    {
+        _rates[currency] = rate;
+        NotifyObservers();
+    }
+}
+
+public class ConsoleObserver : IObserver
+{
+    public void Update(string currency, decimal rate)
+    {
+        Console.WriteLine($"Курс {currency}: {rate}");
+    }
+}
+
+public class FileObserver : IObserver
+{
+    public void Update(string currency, decimal rate)
+    {
+        System.IO.File.AppendAllText("rates.txt", $"Курс {currency}: {rate}\n");
+    }
+}
+
+public class EmailObserver : IObserver
+{
+    public void Update(string currency, decimal rate)
+    {
+        Console.WriteLine($"Отправлено письмо: Курс {currency}: {rate}");
+    }
+}
+
+class Program
+{
+    static void Main(string[] args)
+    {
+        CurrencyExchange currencyExchange = new CurrencyExchange();
+
+        IObserver consoleObserver = new ConsoleObserver();
+        IObserver fileObserver = new FileObserver();
+        IObserver emailObserver = new EmailObserver();
+
+        currencyExchange.RegisterObserver(consoleObserver);
+        currencyExchange.RegisterObserver(fileObserver);
+        currencyExchange.RegisterObserver(emailObserver);
+
+        // Устанавливаем новые курсы валют
+        currencyExchange.SetRate("USD", 75.50m);
+        currencyExchange.SetRate("EUR", 89.30m);
+
+        // Удаляем одного наблюдателя и обновляем курс
+        currencyExchange.RemoveObserver(fileObserver);
+        currencyExchange.SetRate("GBP", 102.80m);
+    }
+}
